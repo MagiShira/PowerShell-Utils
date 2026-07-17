@@ -41,11 +41,16 @@ configuration.
 ### What it does
 
 Because a USB stick doesn't always get the same drive letter, the launcher searches every
-drive from `D:` to `Z:` for a folder you specify, `cd`s into the first match, and runs the
-collector with `-ExecutionPolicy Bypass` so it works on a machine whose policy would
-otherwise block scripts. Out of the box it looks for `PowerShell\kc118-intuneHwIdCollector\`
-(e.g. `D:\PowerShell\kc118-intuneHwIdCollector\collector.ps1`). If no drive has that folder,
-it says so and exits.
+drive from `D:` to `Z:` for `collector.ps1` inside a folder you specify, `cd`s into the first
+match, and runs the collector with `-ExecutionPolicy Bypass` so it works on a machine whose
+policy would otherwise block scripts. Out of the box it looks for
+`PowerShell\kc118-intuneHwIdCollector\` (e.g.
+`D:\PowerShell\kc118-intuneHwIdCollector\collector.ps1`). If no drive has it, it says so and
+exits.
+
+To keep the scripts in the **drive root** instead of a subfolder, leave `scriptFolder` blank
+(`set scriptFolder=`) or set it to a single backslash (`set scriptFolder=\`). The launcher
+then looks for `collector.ps1` directly in each drive root (e.g. `D:\collector.ps1`).
 
 ### Configuring it for your own USB
 
@@ -53,6 +58,7 @@ Everything you'd change lives in the `CONFIG` block at the top of `runHwIdCollec
 
 ```bat
 REM  Path to the tool folder, relative to a drive root.
+REM  Leave blank (or set to \) to use the drive root itself.
 set scriptFolder=PowerShell\kc118-intuneHwIdCollector
 
 REM  Extra arguments passed to collector.ps1 on every run (optional).

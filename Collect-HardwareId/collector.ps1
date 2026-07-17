@@ -134,15 +134,32 @@ if ([string]::IsNullOrWhiteSpace($hwHash)) {
 
 # --- Prepare output directory ----------------------------------------------
 
-if (-not (Test-Path $OutputPath)) {
+function Test-WritableDirectory {
+    # Create the directory if missing and confirm we can actually write into it.
+    # Returns $true on success; on any failure (e.g. a read-only USB) returns $false
+    # so the caller can fall back to a writable location.
+    param([string] $Path)
     try {
-        New-Item -ItemType Directory -Path $OutputPath -Force | Out-Null
+        if (-not (Test-Path $Path)) {
+            New-Item -ItemType Directory -Path $Path -Force -ErrorAction Stop | Out-Null
+        }
+        $probe = Join-Path $Path (".write_test_{0}.tmp" -f [Guid]::NewGuid().ToString('N'))
+        [System.IO.File]::WriteAllText($probe, '')
+        Remove-Item -LiteralPath $probe -Force -ErrorAction SilentlyContinue
+        return $true
     } catch {
-        $fallback = Join-Path ([Environment]::GetFolderPath('Desktop')) 'IntuneHwIdReports'
-        Write-Warning "Could not create '$OutputPath' ($($_.Exception.Message)). Falling back to '$fallback'."
-        New-Item -ItemType Directory -Path $fallback -Force | Out-Null
-        $OutputPath = $fallback
+        return $false
     }
+}
+
+if (-not (Test-WritableDirectory $OutputPath)) {
+    $fallback = Join-Path ([Environment]::GetFolderPath('Desktop')) 'IntuneHwIdReports'
+    Write-Warning "'$OutputPath' is missing or not writable (e.g. a read-only drive). Falling back to '$fallback'."
+    if (-not (Test-WritableDirectory $fallback)) {
+        Write-Error "Could not create a writable reports folder at '$OutputPath' or '$fallback'. Nothing was written."
+        exit 1
+    }
+    $OutputPath = $fallback
 }
 
 $masterCsvPath       = Join-Path $OutputPath 'master.csv'
