@@ -39,13 +39,32 @@
 #>
 [CmdletBinding()]
 param(
-    [string] $OutputPath = (Join-Path $PSScriptRoot 'reports'),
+    [string] $OutputPath = '',
     [string] $GroupTag = '',
     [string] $AssignedUser = '',
     [switch] $Force
 )
 
 $ErrorActionPreference = 'Stop'
+
+# --- Resolve where this script lives ---------------------------------------
+# $PSScriptRoot is unreliable in some hosts (e.g. an SCCM/MDT task-sequence
+# PowerShell, or when the param defaults are bound), so fall back through a
+# couple of other ways to find the script's own folder before giving up.
+$scriptRoot = $PSScriptRoot
+if ([string]::IsNullOrWhiteSpace($scriptRoot)) {
+    $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+}
+if ([string]::IsNullOrWhiteSpace($scriptRoot)) {
+    $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Definition
+}
+if ([string]::IsNullOrWhiteSpace($scriptRoot)) {
+    $scriptRoot = (Get-Location).Path
+}
+
+if ([string]::IsNullOrWhiteSpace($OutputPath)) {
+    $OutputPath = Join-Path $scriptRoot 'reports'
+}
 
 # --- Helpers ---------------------------------------------------------------
 
@@ -89,9 +108,9 @@ if (-not $identity.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrat
     exit 1
 }
 
-$autoPilotScript = Join-Path $PSScriptRoot 'Get-WindowsAutoPilotInfo.ps1'
+$autoPilotScript = Join-Path $scriptRoot 'Get-WindowsAutoPilotInfo.ps1'
 if (-not (Test-Path $autoPilotScript)) {
-    Write-Error "Get-WindowsAutoPilotInfo.ps1 not found next to this script ($PSScriptRoot)."
+    Write-Error "Get-WindowsAutoPilotInfo.ps1 not found next to this script ($scriptRoot)."
     exit 1
 }
 
